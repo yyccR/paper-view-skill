@@ -1,0 +1,277 @@
+---
+name: paperview
+description: PaperView API — generate ECharts visualizations, AI scientific diagrams, and word clouds from data, text, or PDF papers. Use when the user wants to create charts, scientific figures, flowcharts, architecture diagrams, or extract keywords from documents.
+---
+
+# PaperView API
+
+PaperView provides three AI-powered visualization services:
+1. **ECharts Visualization** — generate interactive charts from CSV/JSON/text data
+2. **AI Scientific Diagram** — generate publication-quality figures from text or arxiv PDF
+3. **Word Cloud** — extract keyword frequencies from PDF documents (supports CJK)
+
+## Authentication
+
+All requests require an API Token:
+
+```
+Authorization: Bearer pv_live_<your_token>
+```
+
+Obtain your token from the www.ipaperview.com website (Profile → API Token). Each account can create one token. Set via environment variable `PAPERVIEW_API_TOKEN` or ask the user for their token.
+
+## Base URL
+
+```
+https://api.ipaperview.com
+```
+
+## API Quota
+
+Daily API call limits by plan:
+
+| Plan | Daily Limit |
+|------|-------------|
+| Free | 3 calls/day |
+| Monthly ($4.99/mo) | 30 calls/day |
+| Yearly ($29.99/yr) | 100 calls/day |
+
+Each API call (ECharts generate, AI diagram, wordcloud) consumes 1 quota. Read-only endpoints (list toolsets/templates) do not consume quota.
+
+---
+
+## 1. ECharts Visualization
+
+AI analyzes your data sample, selects the best chart type, and returns a ready-to-render ECharts option. The full data processing happens server-side — AI only sees a sample to generate a transform script, then the backend executes it with Node.js on the full dataset.
+
+### Generate Visualization
+
+**POST /api/v1/viz/generate/**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `data` | string | Yes | Raw data in CSV, JSON, or plain text |
+| `toolset` | string | No | Chart category: `bar`, `line`, `scatter`, `pie`, `heatmap`, `violin`, `manhattan`, `volcano`, `forest`, `survival`, `roc`, `venn`, `upset`, etc. If omitted, AI auto-selects |
+| `template` | string | No | Specific template within the toolset. If omitted, AI auto-selects |
+| `context` | string | No | Natural language instructions, e.g. "show GDP trend by country", "use blue color scheme" |
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer $PAPERVIEW_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "data": "Year,China,USA,Japan\n2018,13608,20544,4971\n2019,14280,21373,5082\n2020,14723,20894,5040\n2021,17734,23315,4941\n2022,17963,25463,4231",
+    "context": "Show GDP trends as a line chart"
+  }' \
+  https://api.ipaperview.com/api/v1/viz/generate/
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "toolset": "line",
+  "template": "confidence_band",
+  "echarts_option": {
+    "title": { "text": "GDP by Country (2018-2022)" },
+    "xAxis": { "type": "category", "data": ["2018", "2019", "2020", "2021", "2022"] },
+    "yAxis": { "type": "value" },
+    "series": [
+      { "name": "China", "type": "line", "data": [13608, 14280, 14723, 17734, 17963] },
+      { "name": "USA", "type": "line", "data": [20544, 21373, 20894, 23315, 25463] },
+      { "name": "Japan", "type": "line", "data": [4971, 5082, 5040, 4941, 4231] }
+    ],
+    "legend": { "data": ["China", "USA", "Japan"] }
+  },
+  "reason": "Time series data with multiple countries — line chart shows trends clearly"
+}
+```
+
+The `echarts_option` can be rendered directly with `echarts.setOption(echarts_option)` in any ECharts-compatible environment.
+
+### List Chart Types
+
+**GET /api/v1/viz/toolsets/**
+
+Returns all available chart categories and their templates. Does not consume quota.
+
+```bash
+curl -H "Authorization: Bearer $PAPERVIEW_API_TOKEN" \
+  https://api.ipaperview.com/api/v1/viz/toolsets/
+```
+
+### List Templates for a Chart Type
+
+**GET /api/v1/viz/toolsets/{toolset_name}/templates/**
+
+```bash
+curl -H "Authorization: Bearer $PAPERVIEW_API_TOKEN" \
+  https://api.ipaperview.com/api/v1/viz/toolsets/bar/templates/
+```
+
+### Available Chart Types
+
+- **Basic:** line, bar, scatter, pie, radar, funnel, boxplot
+- **Advanced:** heatmap, treemap, sankey, tree, sunburst, map, structure
+- **3D:** gl3d (bar3D, scatter3D)
+- **Scientific:** violin, manhattan, volcano, forest, survival, roc, venn, upset, enrichment, circos, waterfall
+
+---
+
+## 2. AI Scientific Diagram
+
+Generate publication-quality scientific diagrams, flowcharts, and research illustrations using AI vision-language models and text-to-image models. Supports arxiv paper URLs directly — the system extracts content and generates figures based on the paper.
+
+### Generate Diagram (SSE Stream)
+
+**POST /api/diagram/ai-generate/**
+
+Returns a Server-Sent Events stream. Use `curl -N` to receive events.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `template_type` | string | Yes | `custom_text_only` (from text) or `custom` (with reference image) |
+| `custom_prompt` | string | Yes | Description of what to draw. Can include style instructions (colors, themes, specific elements) |
+| `pdf_url` | string | No | URL to a PDF paper (supports arxiv abs/pdf URLs like `http://arxiv.org/abs/2510.13809v1`) |
+| `selected_text` | string | No | Text excerpt to visualize |
+| `reference_image_url` | string | No | Reference image URL to guide the style |
+| `language` | string | No | `auto`, `en`, `zh` (default: `auto`) |
+| `aspect_ratio` | string | No | e.g. `16:9`, `1:1`, `4:3` |
+
+**Example — from text description (simplest):**
+
+```bash
+curl -N -X POST \
+  -H "Authorization: Bearer $PAPERVIEW_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "template_type": "custom_text_only",
+    "custom_prompt": "A flowchart: Data Collection -> Preprocessing -> Training -> Evaluation"
+  }' \
+  https://api.ipaperview.com/api/diagram/ai-generate/
+```
+
+**Example — from arxiv paper with custom style:**
+
+```bash
+curl -N -X POST \
+  -H "Authorization: Bearer $PAPERVIEW_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "template_type": "custom_text_only",
+    "pdf_url": "http://arxiv.org/abs/2510.13809v1",
+    "custom_prompt": "Generate an architecture diagram with pink color scheme, include Doraemon as a mascot element"
+  }' \
+  https://api.ipaperview.com/api/diagram/ai-generate/
+```
+
+**SSE Events (in order):**
+
+```
+data: {"type": "step", "step": "extracting", "message": "Extracting document content..."}
+data: {"type": "step", "step": "generating_prompt", "message": "Generating image prompt..."}
+data: {"type": "prompt_generated", "prompt": "...", "enhanced_prompt": "..."}
+data: {"type": "step", "step": "generating_image", "message": "Generating image..."}
+data: {"type": "complete", "success": true, "image_url": "https://...", "model": "gemini-2.0-flash-preview-image-generation"}
+```
+
+The final `complete` event contains `image_url` — a CDN URL to the generated image (hosted on Upyun CDN).
+
+### Modify Diagram (SSE Stream)
+
+**POST /api/diagram/ai-modify/**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `image_url` | string | Yes | URL of the image to modify (from a previous generation) |
+| `modification_prompt` | string | Yes | What to change |
+| `original_prompt` | string | No | Original generation prompt for context |
+
+```bash
+curl -N -X POST \
+  -H "Authorization: Bearer $PAPERVIEW_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "image_url": "https://cdn.example.com/generated/image.jpg",
+    "modification_prompt": "Change color scheme to blue, add labels to each node"
+  }' \
+  https://api.ipaperview.com/api/diagram/ai-modify/
+```
+
+### Get Reference Templates
+
+**GET /api/diagram/templates/**
+
+Returns available diagram templates. Does not consume quota.
+
+```bash
+curl -H "Authorization: Bearer $PAPERVIEW_API_TOKEN" \
+  https://api.ipaperview.com/api/diagram/templates/
+```
+
+---
+
+## 3. Word Cloud
+
+Extract keyword frequencies from PDF documents with automatic CJK (Chinese/Japanese/Korean) segmentation and semantic clustering.
+
+### Extract Word Cloud Data
+
+**POST /api/wordcloud/extract/**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `pdf_url` | string | Yes | URL to a PDF document (supports arxiv URLs) |
+| `max_words` | integer | No | Max keywords to return (default: 100) |
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer $PAPERVIEW_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "pdf_url": "https://arxiv.org/pdf/2301.00001.pdf",
+    "max_words": 50
+  }' \
+  https://api.ipaperview.com/api/wordcloud/extract/
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": [
+    { "word": "neural", "frequency": 45, "cluster": 0 },
+    { "word": "network", "frequency": 38, "cluster": 0 },
+    { "word": "attention", "frequency": 32, "cluster": 1 }
+  ]
+}
+```
+
+The `cluster` field (0-4) groups words by frequency — useful for color coding in word cloud rendering. CJK documents are automatically segmented using jieba.
+
+---
+
+## Error Responses
+
+All endpoints return errors in this format:
+
+```json
+{ "success": false, "error": "Error description" }
+```
+
+| HTTP Code | Meaning |
+|-----------|---------|
+| 400 | Bad request (missing or invalid parameters) |
+| 401 | Invalid or missing API token |
+| 402 | Quota exceeded (daily API call limit reached) |
+| 500 | Server error |
+
+## Usage Tips
+
+1. **Auto-selection**: For ECharts, omit `toolset` and `template` to let AI pick the best chart type for your data
+2. **Large datasets**: Safe to send large CSV files — AI only sees a sample, full data is processed server-side
+3. **SSE parsing**: AI diagram endpoints use Server-Sent Events. Parse each `data:` line as JSON and wait for the `type: "complete"` event
+4. **Arxiv URLs**: Both `http://arxiv.org/abs/...` and `https://arxiv.org/pdf/...` formats are supported for pdf_url
+5. **Custom styles**: Use the `custom_prompt` and `context` fields to request specific colors, themes, or visual elements
