@@ -205,6 +205,105 @@ The `cluster` field (0-4) groups words by frequency — useful for color coding 
 | 402 | Quota exceeded (daily API call limit reached) |
 | 500 | Server error |
 
+## Rendering Results
+
+After calling the API, you MUST render the results visually. No extra dependencies needed — use CDN-loaded HTML files.
+
+### Render ECharts Visualization
+
+When you receive `echarts_option` from `/api/v1/viz/generate/`, create a self-contained HTML file and open it in the browser:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>PaperView Chart</title>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <style>body{margin:0;background:#fff}#chart{width:100vw;height:100vh}</style>
+</head>
+<body>
+  <div id="chart"></div>
+  <script>
+    var chart = echarts.init(document.getElementById('chart'));
+    var option = {{ECHARTS_OPTION_JSON}};
+    chart.setOption(option);
+    window.addEventListener('resize', function() { chart.resize(); });
+  </script>
+</body>
+</html>
+```
+
+Replace `{{ECHARTS_OPTION_JSON}}` with the `echarts_option` value from the API response (the JSON object, not stringified). Save as a `.html` file and open:
+
+```bash
+# macOS
+open /tmp/paperview_chart.html
+# Linux
+xdg-open /tmp/paperview_chart.html
+```
+
+For 3D charts (gl3d toolset), add this additional script tag before the main script:
+```html
+<script src="https://cdn.jsdelivr.net/npm/echarts-gl@2/dist/echarts-gl.min.js"></script>
+```
+
+### Render Word Cloud
+
+When you receive word frequency data from `/api/wordcloud/extract/`, create an HTML file using echarts-wordcloud:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>PaperView Word Cloud</title>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts-wordcloud@2/dist/echarts-wordcloud.min.js"></script>
+  <style>body{margin:0;background:#fff}#chart{width:100vw;height:100vh}</style>
+</head>
+<body>
+  <div id="chart"></div>
+  <script>
+    var chart = echarts.init(document.getElementById('chart'));
+    var words = {{WORDCLOUD_DATA_JSON}};
+    var clusterColors = ['#5470c6','#91cc75','#fac858','#ee6666','#73c0de'];
+    chart.setOption({
+      series: [{
+        type: 'wordCloud',
+        sizeRange: [14, 80],
+        rotationRange: [-45, 45],
+        gridSize: 8,
+        shape: 'circle',
+        textStyle: {
+          fontFamily: 'sans-serif',
+          color: function(params) {
+            return clusterColors[params.data.cluster || 0];
+          }
+        },
+        data: words.map(function(w) {
+          return { name: w.word, value: w.frequency, cluster: w.cluster };
+        })
+      }]
+    });
+  </script>
+</body>
+</html>
+```
+
+Replace `{{WORDCLOUD_DATA_JSON}}` with the `data` array from the API response.
+
+### Render AI Diagram
+
+The AI diagram endpoint already returns an `image_url` (CDN link). Simply download it or open in browser:
+
+```bash
+# Open in browser
+open "https://cdn.example.com/generated/image.jpg"
+# Or download
+curl -o /tmp/paperview_diagram.png "https://cdn.example.com/generated/image.jpg"
+```
+
 ## Usage Tips
 
 1. **Auto-selection**: For ECharts, omit `toolset` and `template` to let AI pick the best chart type for your data
@@ -212,3 +311,4 @@ The `cluster` field (0-4) groups words by frequency — useful for color coding 
 3. **SSE parsing**: AI diagram endpoint uses Server-Sent Events. Parse each `data:` line as JSON and wait for the `type: "complete"` event
 4. **Arxiv URLs**: Both `http://arxiv.org/abs/...` and `https://arxiv.org/pdf/...` formats are supported for pdf_url
 5. **Custom styles**: Use the `custom_prompt` and `context` fields to request specific colors, themes, or visual elements
+6. **Always render**: After receiving API results, always render them visually using the HTML templates above so the user can see the chart/wordcloud
