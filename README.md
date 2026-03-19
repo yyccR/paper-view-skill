@@ -37,11 +37,7 @@ cp -r skills/paperview ~/.claude/skills/
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/v1/viz/generate/` | POST | Generate ECharts visualization from data |
-| `/api/v1/viz/toolsets/` | GET | List available chart types |
-| `/api/v1/viz/toolsets/{name}/templates/` | GET | List templates for a chart type |
 | `/api/diagram/ai-generate/` | POST | Generate AI scientific diagram (SSE) |
-| `/api/diagram/ai-modify/` | POST | Modify existing diagram (SSE) |
-| `/api/diagram/templates/` | GET | List diagram templates |
 | `/api/wordcloud/extract/` | POST | Extract word cloud data from PDF |
 
 ## API Quota
