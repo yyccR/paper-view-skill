@@ -1,24 +1,45 @@
-# PaperView Skill for Claude Code
+# PaperView Skill
 
-A Claude Code skill that provides AI-powered visualization APIs for research and data analysis.
+AI-powered visualization APIs for research and data analysis. Compatible with **Claude Code** and **OpenClaw**.
 
 ## Features
 
-- **ECharts Visualization** — Generate interactive charts (bar, line, scatter, pie, heatmap, scientific plots, etc.) from CSV/JSON/text data. AI auto-selects the best chart type.
+- **ECharts Visualization** — Generate interactive charts (98 templates across 25 chart types: bar, line, scatter, pie, heatmap, scientific plots, etc.) from CSV/JSON/text data. AI auto-selects the best chart type.
 - **AI Scientific Diagram** — Generate publication-quality figures, flowcharts, and architecture diagrams from text descriptions or arxiv papers.
 - **Word Cloud** — Extract keyword frequencies from PDF documents with CJK support.
 
 ## Installation
 
+### Claude Code
+
 ```bash
 claude /install-skill https://github.com/yyccR/paper-view-skill
 ```
 
-Or manually copy the skill:
+Or manually:
 
 ```bash
-cp -r skills/paperview ~/.claude/skills/
+git clone https://github.com/yyccR/paper-view-skill.git
+cp -r paper-view-skill/skills/paperview ~/.claude/skills/
 ```
+
+### OpenClaw
+
+```bash
+clawhub install paperview
+```
+
+Or manually:
+
+```bash
+git clone https://github.com/yyccR/paper-view-skill.git
+# Machine-wide
+cp -r paper-view-skill/skills/paperview ~/.openclaw/skills/
+# Or workspace-specific
+cp -r paper-view-skill/skills/paperview <your-workspace>/skills/
+```
+
+After installation, restart your OpenClaw session or ask the agent to "refresh skills".
 
 ## Quick Start
 
@@ -27,10 +48,9 @@ cp -r skills/paperview ~/.claude/skills/
    ```bash
    export PAPERVIEW_API_TOKEN=pv_live_your_token_here
    ```
-3. Use the skill in Claude Code:
-   ```
-   /paperview
-   ```
+3. Use the skill:
+   - Claude Code: `/paperview`
+   - OpenClaw: The agent auto-discovers the skill and uses it when you ask for visualizations
 
 ## API Endpoints
 
@@ -60,6 +80,16 @@ curl -X POST \
   https://api.ipaperview.com/api/v1/viz/generate/
 ```
 
+### Specify chart type (AI picks best sub-template)
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer $PAPERVIEW_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"data": "Country,GDP,LifeExpectancy\nChina,17963,78\nUSA,25463,77\nJapan,4231,84", "toolset": "scatter", "context": "Show GDP vs life expectancy"}' \
+  https://api.ipaperview.com/api/v1/viz/generate/
+```
+
 ### Generate a diagram from an arxiv paper
 
 ```bash
@@ -80,7 +110,7 @@ curl -X POST \
   https://api.ipaperview.com/api/wordcloud/extract/
 ```
 
-See [SKILL.md](skills/paperview/SKILL.md) for full API documentation.
+See [SKILL.md](skills/paperview/SKILL.md) for full API documentation including response formats and rendering guides.
 
 ## License
 
