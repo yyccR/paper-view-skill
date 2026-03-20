@@ -6,13 +6,9 @@ homepage: https://www.ipaperview.com
 repository: https://github.com/yyccR/paper-view-skill
 license: MIT
 env:
-  - name: PAPERVIEW_API_TOKEN
+  PAPERVIEW_API_TOKEN:
     description: API token obtained from www.ipaperview.com (Profile → API Token). Format: pv_live_<hex_string>
     required: true
-privacy:
-  - User-provided data (CSV/JSON/text) is sent to api.ipaperview.com for AI-powered chart generation
-  - PDF URLs are sent to api.ipaperview.com for content extraction (AI diagrams and word clouds)
-  - No data is stored permanently; generated images are cached on CDN temporarily
 ---
 
 # PaperView API
@@ -315,6 +311,23 @@ open "https://cdn.example.com/generated/image.jpg"
 # Or download
 curl -o /tmp/paperview_diagram.png "https://cdn.example.com/generated/image.jpg"
 ```
+
+## Privacy & Data Handling
+
+**What data is sent to api.ipaperview.com:**
+- **ECharts API**: The raw text data (CSV/JSON/text string) you provide in the `data` field is sent to the server. No local files are uploaded — you must pass the data content as a string in the request body.
+- **AI Diagram API**: Only the `pdf_url` (a public URL) is sent. The server fetches the PDF from that URL. No local files are uploaded from your machine.
+- **Word Cloud API**: Only the `pdf_url` (a public URL) is sent. The server fetches the PDF from that URL. No local files are uploaded from your machine.
+
+**Data retention:**
+- Submitted text data (CSV/JSON) is processed in memory and **not stored** after the response is returned.
+- Generated AI diagram images are uploaded to Upyun CDN and retained for **30 days**, after which they are automatically deleted.
+- No user data is sold or shared with third parties.
+
+**Authentication:**
+- This skill requires a `PAPERVIEW_API_TOKEN` environment variable (format: `pv_live_<hex_string>`).
+- Obtain your token from [www.ipaperview.com](https://www.ipaperview.com) → Profile → API Token.
+- Each API call is authenticated and rate-limited per your subscription plan.
 
 ## Usage Tips
 
