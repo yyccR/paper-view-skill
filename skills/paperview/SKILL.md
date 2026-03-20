@@ -1,6 +1,18 @@
 ---
 name: paperview
 description: PaperView API — generate ECharts visualizations, AI scientific diagrams, and word clouds from data, text, or PDF papers. Use when the user wants to create charts, scientific figures, flowcharts, architecture diagrams, or extract keywords from documents.
+author: yyccR
+homepage: https://www.ipaperview.com
+repository: https://github.com/yyccR/paper-view-skill
+license: MIT
+env:
+  - name: PAPERVIEW_API_TOKEN
+    description: API token obtained from www.ipaperview.com (Profile → API Token). Format: pv_live_<hex_string>
+    required: true
+privacy:
+  - User-provided data (CSV/JSON/text) is sent to api.ipaperview.com for AI-powered chart generation
+  - PDF URLs are sent to api.ipaperview.com for content extraction (AI diagrams and word clouds)
+  - No data is stored permanently; generated images are cached on CDN temporarily
 ---
 
 # PaperView API
