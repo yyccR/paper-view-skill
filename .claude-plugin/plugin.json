@@ -1,0 +1,11 @@
+{
+  "name": "paper-view-skill",
+  "description": "AI-powered visualization APIs: ECharts charts (98 templates), scientific diagrams from arxiv papers, and word cloud extraction with CJK support",
+  "version": "1.0.0",
+  "author": {
+    "name": "yyccR"
+  },
+  "repository": "https://github.com/yyccR/paper-view-skill",
+  "homepage": "https://www.ipaperview.com",
+  "license": "MIT"
+}
